@@ -1,4 +1,3 @@
-use keyboard::Reader;
 use crossterm::terminal;
 use crossterm::event;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
@@ -21,12 +20,12 @@ impl Drop for CleanUp {
 }
 
 struct Editor {
-    reader: Reader,
+    reader: keyboard::Reader,
 }
 
 impl Editor {
     fn new() -> Self {
-        Self { reader: Reader }
+        Self { reader: keyboard::Reader }
     }
     fn process_keypress(&self) -> crossterm::Result<bool> {
         match self.reader.read_key()? {
