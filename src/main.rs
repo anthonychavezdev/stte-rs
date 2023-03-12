@@ -1,8 +1,10 @@
-use crossterm::terminal;
 use crossterm::event;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
+use crossterm::terminal;
+use screen::Screen;
 
 mod keyboard;
+mod screen;
 
 /** The `CleanUp` struct is used to disable raw_mode
 when the struct goes out of scope.
@@ -21,11 +23,15 @@ impl Drop for CleanUp {
 
 struct Editor {
     reader: keyboard::Reader,
+    output: Screen,
 }
 
 impl Editor {
     fn new() -> Self {
-        Self { reader: keyboard::Reader }
+        Self {
+            reader: keyboard::Reader,
+            output: Screen::new(),
+        }
     }
     fn process_keypress(&self) -> crossterm::Result<bool> {
         match self.reader.read_key()? {
@@ -41,6 +47,7 @@ impl Editor {
     }
 
     fn run(&self) -> crossterm::Result<bool> {
+        self.output.refresh()?;
         self.process_keypress()
     }
 }
