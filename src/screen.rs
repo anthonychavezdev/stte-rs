@@ -12,15 +12,16 @@ impl Screen {
         Self { win_size }
     }
 
-    fn draw_rows(&self) {
+    fn draw_rows(&self) -> crossterm::Result<()> {
         let screen_rows = self.win_size.1;
         for i in 0..screen_rows {
             print!("~");
             if i < screen_rows - 1 {
-                println!("\r");
+                print!("\r\n");
             }
-            if let Ok(()) = stdout().flush() {}
+            stdout().flush()?;
         }
+        Ok(())
     }
 
     pub fn clear() -> crossterm::Result<()> {
@@ -30,7 +31,7 @@ impl Screen {
 
     pub fn refresh(&self) -> crossterm::Result<()> {
         Self::clear()?;
-        self.draw_rows();
+        self.draw_rows()?;
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
 }
