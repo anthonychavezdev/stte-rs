@@ -1,11 +1,10 @@
-use std::time::Duration;
 use crossterm::event;
 use crossterm::event::{Event, KeyEvent};
+use std::time::Duration;
 
+pub struct KeyboardReader;
 
-pub struct Reader;
-
-impl Reader {
+impl KeyboardReader {
     pub fn read_key(&self) -> crossterm::Result<KeyEvent> {
         loop {
             if event::poll(Duration::from_millis(500))? {

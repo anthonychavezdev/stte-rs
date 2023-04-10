@@ -1,8 +1,13 @@
 use crossterm::event;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
 use crossterm::terminal;
+use std::env;
+use std::fs::File;
+
+use buffer::Buffer;
 use screen::Screen;
 
+mod buffer;
 mod keyboard;
 mod screen;
 
@@ -22,18 +27,21 @@ impl Drop for CleanUp {
     }
 }
 
-struct Editor {
-    reader: keyboard::Reader,
-    output: Screen,
+struct TextEditor<'a> {
+    buffer: Option<Buffer>,
+    output: Screen<'a>,
+    reader: keyboard::KeyboardReader,
 }
 
-impl Editor {
+impl<'a> TextEditor<'a> {
     fn new() -> Self {
         Self {
-            reader: keyboard::Reader,
+            reader: keyboard::KeyboardReader,
             output: Screen::new(),
+            buffer: None,
         }
     }
+
     fn process_keypress(&self) -> crossterm::Result<bool> {
         match self.reader.read_key()? {
             KeyEvent {
@@ -47,8 +55,8 @@ impl Editor {
         Ok(true)
     }
 
-    fn run(&self) -> crossterm::Result<bool> {
-        self.output.refresh()?;
+    fn run(&mut self, buffer: &'a Option<Buffer>) -> crossterm::Result<bool> {
+        self.output.display_buffer(&buffer)?;
         self.process_keypress()
     }
 }
@@ -57,7 +65,22 @@ fn main() -> crossterm::Result<()> {
     // When this variable goes out of scope the drop method is ran
     let _clean_up: CleanUp = CleanUp;
     terminal::enable_raw_mode()?;
-    let editor: Editor = Editor::new();
-    while editor.run()? {}
+    let mut editor: TextEditor = TextEditor::new();
+    let args: Vec<String> = env::args().collect();
+
+    let buffer: Option<Buffer> = if args.len() > 1 {
+        let path = &args[1];
+        let file = File::open(path)?;
+        match Buffer::from_path(&path) {
+            Ok(buffer) => Some(buffer),
+            Err(error) => {
+                eprintln!("Error creating buffer or opening file\n{:?}", error);
+                None
+            }
+        }
+    } else {
+        None
+    };
+    while editor.run(&buffer)? {}
     Ok(())
 }
