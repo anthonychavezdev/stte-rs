@@ -20,6 +20,16 @@ pub struct Buffer {
 }
 
 impl Buffer {
+    pub fn new() -> Buffer {
+        let text = Rope::new();
+        Buffer {
+            text,
+            file_path: None,
+            status: Status::Clean,
+            cursor_pos: 0
+        }
+    }
+
     pub fn from_path(path: &str) -> io::Result<Self> {
         let text = Rope::from_reader(&mut BufReader::new(File::open(&path)?))?;
         Ok(Buffer {

@@ -27,18 +27,16 @@ impl Drop for CleanUp {
     }
 }
 
-struct TextEditor<'a> {
-    buffer: Option<Buffer>,
-    output: Screen<'a>,
+struct TextEditor {
+    output: Screen,
     reader: keyboard::KeyboardReader,
 }
 
-impl<'a> TextEditor<'a> {
+impl TextEditor {
     fn new() -> Self {
         Self {
             reader: keyboard::KeyboardReader,
             output: Screen::new(),
-            buffer: None,
         }
     }
 
@@ -55,7 +53,7 @@ impl<'a> TextEditor<'a> {
         Ok(true)
     }
 
-    fn run(&mut self, buffer: &'a Option<Buffer>) -> crossterm::Result<bool> {
+    fn run(&mut self, buffer: &mut Buffer) -> crossterm::Result<bool> {
         self.output.display_buffer(&buffer)?;
         self.process_keypress()
     }
@@ -68,19 +66,18 @@ fn main() -> crossterm::Result<()> {
     let mut editor: TextEditor = TextEditor::new();
     let args: Vec<String> = env::args().collect();
 
-    let buffer: Option<Buffer> = if args.len() > 1 {
-        let path = &args[1];
-        let file = File::open(path)?;
+    let mut buffer: Buffer = if args.len() > 1 {
+        let path: &String = &args[1];
         match Buffer::from_path(&path) {
-            Ok(buffer) => Some(buffer),
+            Ok(buffer) => buffer,
             Err(error) => {
                 eprintln!("Error creating buffer or opening file\n{:?}", error);
-                None
+                Buffer::new() // Create an empty buffer if there's an error
             }
         }
     } else {
-        None
+        Buffer::new() // Create an empty buffer if no file is specified
     };
-    while editor.run(&buffer)? {}
+    while editor.run(&mut buffer)? {}
     Ok(())
 }
