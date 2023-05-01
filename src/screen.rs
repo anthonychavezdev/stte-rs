@@ -40,7 +40,7 @@ impl Screen {
 
     pub fn refresh(&self) -> crossterm::Result<()> {
         Self::clear()?;
-        execute!(stdout(), cursor::MoveTo(0, 0))
+        Ok(())
     }
     pub fn display_buffer(&mut self, buffer: &Buffer) -> crossterm::Result<()> {
         self.refresh()?;
