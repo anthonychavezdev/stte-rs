@@ -2,7 +2,6 @@ use crossterm::event;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
 use crossterm::terminal;
 use std::env;
-use std::fs::File;
 
 use buffer::Buffer;
 use screen::Screen;
