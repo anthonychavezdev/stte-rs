@@ -1,7 +1,6 @@
 use crate::buffer::Buffer;
-use crossterm::style::{Color, Print, SetForegroundColor};
 use crossterm::terminal::ClearType;
-use crossterm::{cursor, execute, queue, terminal};
+use crossterm::{cursor, execute, queue, terminal, style};
 use std::io::{stdout, Write};
 
 /// The Screen struct represents the terminal screen.
@@ -21,12 +20,15 @@ impl Screen {
         let mut stdout = stdout();
         if let Ok((_, screen_rows)) = self.win_size {
             for i in starting_row..screen_rows {
-                queue!(stdout, cursor::MoveTo(0, i), Print("~"))?;
+                queue!(stdout, cursor::MoveTo(0, i),
+                    style::SetForegroundColor(style::Color::DarkGrey),
+                    style::Print("~"))?;
                 if i < screen_rows - 1 {
-                    queue!(stdout, Print("\r\n"))?;
+                    queue!(stdout, style::Print("\r\n"))?;
                 }
             }
         }
+        queue!(stdout, style::ResetColor)?;
         stdout.flush()?;
         Ok(())
     }
