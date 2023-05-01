@@ -16,7 +16,7 @@ pub struct Buffer {
     text: Rope,                 // text from a file or in memory
     file_path: Option<PathBuf>, // path associated with a file. Buffers don't always need to be associated with a file, they can be in memory only
     status: Status, // Whether the buffer has been modified, left unchanged, or is being saved back to disk?
-    cursor_pos: i32,
+    cursor_pos: usize,
 }
 
 impl Buffer {
@@ -28,6 +28,44 @@ impl Buffer {
             status: Status::Clean,
             cursor_pos: 0
         }
+    }
+
+    pub fn move_cursor_left(&mut self) {
+        if self.cursor_pos > 0 {
+            self.cursor_pos -= 1;
+        }
+    }
+
+    pub fn move_cursor_right(&mut self) {
+        if self.cursor_pos < self.text.len_chars() {
+            self.cursor_pos += 1;
+        }
+    }
+
+    pub fn move_cursor_up(&mut self) {
+        let (x, y) = self.get_cursor_xy();
+        if y > 0 {
+            let new_y = y - 1;
+            let new_x = std::cmp::min(x, self.text.line(new_y).len_chars());
+            self.cursor_pos = self.text.line_to_char(new_y) + new_x;
+        }
+    }
+
+    pub fn move_cursor_down(&mut self) {
+        let (x, y) = self.get_cursor_xy();
+        if y < self.text.len_lines() - 1 {
+            let new_y = y + 1;
+            let new_x = std::cmp::min(x, self.text.line(new_y).len_chars());
+            self.cursor_pos = self.text.line_to_char(new_y) + new_x;
+        }
+    }
+
+    pub fn get_cursor_xy(&self) -> (usize, usize) {
+        let cursor_line = self.text.char_to_line(self.cursor_pos);
+        let line_start_char = self.text.line_to_char(cursor_line);
+        let cursor_x = self.cursor_pos - line_start_char;
+        let cursor_y = cursor_line;
+        (cursor_x, cursor_y)
     }
 
     pub fn from_path(path: &str) -> io::Result<Self> {

@@ -54,6 +54,7 @@ impl Screen {
             row += 1;
         }
         self.draw_eof_indicators(row)?;
-        execute!(stdout(), cursor::MoveTo(0, 0))
+        let (cursor_x, cursor_y) = buffer.get_cursor_xy();
+        execute!(stdout(), cursor::MoveTo(cursor_x as u16, cursor_y as u16))
     }
 }

@@ -39,7 +39,7 @@ impl TextEditor {
         }
     }
 
-    fn process_keypress(&self) -> crossterm::Result<bool> {
+    fn process_keypress(&self, buffer: &mut Buffer) -> crossterm::Result<bool> {
         match self.reader.read_key()? {
             KeyEvent {
                 code: KeyCode::Char('q'),
@@ -47,6 +47,38 @@ impl TextEditor {
                 kind: KeyEventKind::Press,
                 state: KeyEventState::NONE,
             } => return Ok(false),
+            KeyEvent {
+                code: KeyCode::Left,
+                modifiers: event::KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            } => {
+                buffer.move_cursor_left();
+            }
+            KeyEvent {
+                code: KeyCode::Right,
+                modifiers: event::KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            } => {
+                buffer.move_cursor_right();
+            }
+            KeyEvent {
+                code: KeyCode::Up,
+                modifiers: event::KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            } => {
+                buffer.move_cursor_up();
+            }
+            KeyEvent {
+                code: KeyCode::Down,
+                modifiers: event::KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            } => {
+                buffer.move_cursor_down();
+            }
             _ => {}
         }
         Ok(true)
@@ -54,7 +86,7 @@ impl TextEditor {
 
     fn run(&mut self, buffer: &mut Buffer) -> crossterm::Result<bool> {
         self.output.display_buffer(&buffer)?;
-        self.process_keypress()
+        self.process_keypress(buffer)
     }
 }
 
