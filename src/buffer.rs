@@ -2,7 +2,7 @@ use ropey::iter::{Bytes, Chars, Chunks, Lines};
 use ropey::{Rope, RopeSlice};
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter};
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 #[derive(Debug)]
 pub enum Status {
@@ -69,8 +69,12 @@ impl Buffer {
     }
 
     pub fn from_path(path: &str) -> io::Result<Self> {
+        if !Path::new(path).exists() {
+            File::create(path)?;
+        }
         let text = Rope::from_reader(&mut BufReader::new(File::open(&path)?))?;
-        Ok(Buffer {
+
+         Ok(Buffer {
             text,
             file_path: Some(PathBuf::from(path)),
             status: Status::Clean,
@@ -120,13 +124,20 @@ impl Buffer {
         Ok(())
     }
 
-    pub fn edit(&mut self, start: usize, end: usize, text: &str) {
-        if start != end {
-            self.text.remove(start..end);
-        }
-        if !text.is_empty() {
-            self.text.insert(start, text);
-        }
+    pub fn insert_char(&mut self, c: char) {
+        self.text.insert_char(self.cursor_pos, c);
+        self.cursor_pos += 1;
         self.status = Status::Modified;
+    }
+    pub fn delete_char(&mut self) {
+        if self.cursor_pos > 0 {
+            self.text.remove((self.cursor_pos - 1)..self.cursor_pos);
+            self.cursor_pos -= 1;
+            self.status = Status::Modified;
+        }
+    }
+    pub fn insert_str_at_cursor(&mut self, bytes: &str) {
+        self.text.insert(self.cursor_pos, bytes);
+        self.move_cursor_right();
     }
 }

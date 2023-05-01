@@ -1,14 +1,15 @@
-use crossterm::event;
+use crossterm::{event, terminal};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
-use crossterm::terminal;
 use std::env;
 
 use buffer::Buffer;
 use screen::Screen;
+use file_props::FileProps;
 
 mod buffer;
 mod keyboard;
 mod screen;
+mod file_props;
 
 /** The `CleanUp` struct is used to disable raw_mode
 when the struct goes out of scope.
@@ -29,6 +30,7 @@ impl Drop for CleanUp {
 struct TextEditor {
     output: Screen,
     reader: keyboard::KeyboardReader,
+    file_props: FileProps
 }
 
 impl TextEditor {
@@ -36,6 +38,7 @@ impl TextEditor {
         Self {
             reader: keyboard::KeyboardReader,
             output: Screen::new(),
+            file_props: FileProps::new(),
         }
     }
 
@@ -78,6 +81,47 @@ impl TextEditor {
                 state: KeyEventState::NONE,
             } => {
                 buffer.move_cursor_down();
+            }
+            KeyEvent {
+                code: KeyCode::Char('s'),
+                modifiers: event::KeyModifiers::CONTROL,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            } => {
+                if let Err(e) = buffer.save() {
+                    eprintln!("Error saving file: {:?}", e);
+                } else {
+                    println!("File saved successfully.");
+                }
+            }
+            KeyEvent {
+                code: KeyCode::Enter,
+                modifiers: _,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE
+            } => {
+                let ending: String = self.file_props.line_endng();
+                buffer.insert_str_at_cursor(&ending);
+            }
+            KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE
+            } => {
+                if modifiers.contains(event::KeyModifiers::SHIFT) {
+                    buffer.insert_char(c.to_uppercase().next().unwrap_or(c));
+                } else {
+                    buffer.insert_char(c);
+                }
+            }
+            KeyEvent {
+                code: KeyCode::Backspace,
+                modifiers: event::KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE
+            } => {
+                buffer.delete_char();
             }
             _ => {}
         }
