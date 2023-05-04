@@ -138,13 +138,35 @@ impl Buffer {
 
     pub fn delete_char(&mut self) {
         if self.cursor_pos > 0 {
-            self.text.remove((self.cursor_pos - 1)..self.cursor_pos);
-            self.cursor_pos -= 1;
+            if let Some(file_props) = &self.file_props {
+                let ending: String = file_props.line_ending();
+                if  ending.eq("\r\n") &&
+                    self.cursor_pos > 2 &&
+                    self.text.slice((self.cursor_pos - 2)..self.cursor_pos).eq("\r\n") {
+                        self.text.remove((self.cursor_pos - 2)..self.cursor_pos);
+                        self.cursor_pos -= 2;
+                    } else {
+                        self.text.remove((self.cursor_pos - 1)..self.cursor_pos);
+                        self.cursor_pos -= 1;
+                    }
+            }
             self.status = Status::Modified;
         }
     }
-    pub fn insert_str_at_cursor(&mut self, bytes: &str) {
-        self.text.insert(self.cursor_pos, bytes);
-        self.move_cursor_right();
+
+    pub fn insert_newline(&mut self) -> crossterm::Result<()> {
+        if let Some(file_props) = &self.file_props {
+            let ending: String = file_props.line_ending();
+            self.text.insert(self.cursor_pos, &ending);
+            // How much to move to the right to be in front of the newline character(s).
+            if ending.eq("\r\n") {
+                self.move_cursor_right();
+                self.move_cursor_right();
+            } else {
+                self.move_cursor_right();
+            }
+        }
+        Screen::clear()?; // This is needed to bremove the "~" character after hitting enter
+        Ok(())
     }
 }
