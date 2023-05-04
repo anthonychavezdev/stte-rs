@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct FileProps {
     line_ending: String
 }
@@ -13,7 +14,7 @@ impl FileProps {
         }
             
     }
-    pub fn line_endng(&self) -> String {
+    pub fn line_ending(&self) -> String {
         self.line_ending.clone()
     }
 }

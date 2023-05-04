@@ -4,6 +4,9 @@ use std::fs::File;
 use std::io::{self, BufReader, BufWriter};
 use std::path::{PathBuf, Path};
 
+use crate::file_props::FileProps;
+use crate::screen::Screen;
+
 #[derive(Debug)]
 pub enum Status {
     Modified,
@@ -17,16 +20,18 @@ pub struct Buffer {
     file_path: Option<PathBuf>, // path associated with a file. Buffers don't always need to be associated with a file, they can be in memory only
     status: Status, // Whether the buffer has been modified, left unchanged, or is being saved back to disk?
     cursor_pos: usize,
+    file_props: Option<FileProps>
 }
 
 impl Buffer {
-    pub fn new() -> Buffer {
+    pub fn new(file_props: Option<FileProps>) -> Buffer {
         let text = Rope::new();
         Buffer {
             text,
             file_path: None,
             status: Status::Clean,
-            cursor_pos: 0
+            cursor_pos: 0,
+            file_props
         }
     }
 
@@ -74,11 +79,12 @@ impl Buffer {
         }
         let text = Rope::from_reader(&mut BufReader::new(File::open(&path)?))?;
 
-         Ok(Buffer {
+        Ok(Buffer {
             text,
             file_path: Some(PathBuf::from(path)),
             status: Status::Clean,
             cursor_pos: 0,
+            file_props: Some(FileProps::new())
         })
     }
 
@@ -129,6 +135,7 @@ impl Buffer {
         self.cursor_pos += 1;
         self.status = Status::Modified;
     }
+
     pub fn delete_char(&mut self) {
         if self.cursor_pos > 0 {
             self.text.remove((self.cursor_pos - 1)..self.cursor_pos);

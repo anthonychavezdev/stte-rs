@@ -4,7 +4,6 @@ use std::env;
 
 use buffer::Buffer;
 use screen::Screen;
-use file_props::FileProps;
 
 mod buffer;
 mod keyboard;
@@ -30,7 +29,6 @@ impl Drop for CleanUp {
 struct TextEditor {
     output: Screen,
     reader: keyboard::KeyboardReader,
-    file_props: FileProps
 }
 
 impl TextEditor {
@@ -38,11 +36,10 @@ impl TextEditor {
         Self {
             reader: keyboard::KeyboardReader,
             output: Screen::new(),
-            file_props: FileProps::new(),
         }
     }
 
-    fn process_keypress(&self, buffer: &mut Buffer) -> crossterm::Result<bool> {
+    fn process_keypress(&mut self, buffer: &mut Buffer) -> crossterm::Result<bool> {
         match self.reader.read_key()? {
             KeyEvent {
                 code: KeyCode::Char('q'),
@@ -100,8 +97,7 @@ impl TextEditor {
                 kind: KeyEventKind::Press,
                 state: KeyEventState::NONE
             } => {
-                let ending: String = self.file_props.line_endng();
-                buffer.insert_str_at_cursor(&ending);
+                buffer.insert_newline()?;
             }
             KeyEvent {
                 code: KeyCode::Char(c),
@@ -147,11 +143,11 @@ fn main() -> crossterm::Result<()> {
             Ok(buffer) => buffer,
             Err(error) => {
                 eprintln!("Error creating buffer or opening file\n{:?}", error);
-                Buffer::new() // Create an empty buffer if there's an error
+                Buffer::new(None) // Create an empty buffer if there's an error
             }
         }
     } else {
-        Buffer::new() // Create an empty buffer if no file is specified
+        Buffer::new(None) // Create an empty buffer if no file is specified
     };
     while editor.run(&mut buffer)? {}
     Ok(())
