@@ -149,6 +149,8 @@ fn main() -> crossterm::Result<()> {
     } else {
         Buffer::new(None) // Create an empty buffer if no file is specified
     };
+    // Clear terminal screen on first run
+    Screen::clear().expect("Error clearing screen");
     while editor.run(&mut buffer)? {}
     Ok(())
 }
