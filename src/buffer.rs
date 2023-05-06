@@ -160,10 +160,9 @@ impl Buffer {
             self.text.insert(self.cursor_pos, &ending);
             // How much to move to the right to be in front of the newline character(s).
             if ending.eq("\r\n") {
-                self.move_cursor_right();
-                self.move_cursor_right();
+                self.cursor_pos += 2;
             } else {
-                self.move_cursor_right();
+                self.cursor_pos += 1;
             }
         }
         Screen::clear()?; // This is needed to bremove the "~" character after hitting enter
