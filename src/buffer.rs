@@ -1,3 +1,5 @@
+use crossterm::terminal::ClearType;
+use crossterm::{execute, terminal};
 use ropey::iter::{Bytes, Chars, Chunks, Lines};
 use ropey::{Rope, RopeSlice};
 use std::fs::File;
@@ -5,7 +7,6 @@ use std::io::{self, BufReader, BufWriter};
 use std::path::{PathBuf, Path};
 
 use crate::file_props::FileProps;
-use crate::screen::Screen;
 
 #[derive(Debug)]
 pub enum Status {
@@ -136,7 +137,7 @@ impl Buffer {
         self.status = Status::Modified;
     }
 
-    pub fn delete_char(&mut self) {
+    pub fn delete_char(&mut self) -> crossterm::Result<()> {
         if self.cursor_pos > 0 {
             if let Some(file_props) = &self.file_props {
                 let ending: String = file_props.line_ending();
@@ -150,8 +151,14 @@ impl Buffer {
                         self.cursor_pos -= 1;
                     }
             }
+            // I don't know how efficient this is, but it fixes the issue where
+            // when the user removes a bunch of new lines, it wouldn't refresh
+            // what was underneath the cursor so there were "ghost" images
+            // of the text that used to be there
+            execute!(std::io::stdout(), terminal::Clear(ClearType::FromCursorDown))?;
             self.status = Status::Modified;
         }
+        Ok(())
     }
 
     pub fn insert_newline(&mut self) -> crossterm::Result<()> {
@@ -165,7 +172,7 @@ impl Buffer {
                 self.cursor_pos += 1;
             }
         }
-        Screen::clear()?; // This is needed to bremove the "~" character after hitting enter
+        execute!(std::io::stdout(), terminal::Clear(ClearType::FromCursorDown))?;
         Ok(())
     }
 }

@@ -117,7 +117,7 @@ impl TextEditor {
                 kind: KeyEventKind::Press,
                 state: KeyEventState::NONE
             } => {
-                buffer.delete_char();
+                buffer.delete_char()?;
             }
             _ => {}
         }
