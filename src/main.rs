@@ -85,10 +85,13 @@ impl TextEditor {
                 kind: KeyEventKind::Press,
                 state: KeyEventState::NONE,
             } => {
-                if let Err(e) = buffer.save() {
-                    eprintln!("Error saving file: {:?}", e);
-                } else {
-                    println!("File saved successfully.");
+                match buffer.save() {
+                    Ok(message) => {
+                        self.output.display_status_message(&message)?;
+                    }
+                    Err(e) => {
+                        self.output.display_status_message(&format!("{}", e.to_string()))?;
+                    }
                 }
             }
             KeyEvent {

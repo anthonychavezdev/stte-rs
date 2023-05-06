@@ -22,7 +22,7 @@ impl Screen {
     fn draw_eof_indicators(&mut self, starting_row: u16) -> crossterm::Result<()> {
         if let Ok(win_size) = self.win_size {
             let (_, screen_rows) = win_size;
-            for i in starting_row..screen_rows {
+            for i in starting_row..screen_rows - 1 {
                 queue!(self.stdout, cursor::MoveTo(0, i),
                     style::SetForegroundColor(style::Color::DarkGrey),
                     style::Print("~"))?;
@@ -59,5 +59,22 @@ impl Screen {
         self.draw_eof_indicators(row)?;
         let (cursor_x, cursor_y) = buffer.get_cursor_xy();
         execute!(self.stdout, cursor::MoveTo(cursor_x as u16, cursor_y as u16))
+    }
+
+    pub fn display_status_message(&mut self, message: &str) -> crossterm::Result<()> {
+        if let Ok(win_size) = self.win_size {
+            let (_, screen_rows) = win_size;
+            queue!(self.stdout,
+                cursor::MoveTo(1, screen_rows - 1),
+                terminal::Clear(ClearType::CurrentLine),
+                style::Print(message))?;
+
+            execute!(self.stdout,
+            cursor::MoveTo(1, screen_rows - 2),
+            terminal::Clear(ClearType::CurrentLine))?;
+            self.stdout.flush()?;
+
+        }
+        Ok(())
     }
 }

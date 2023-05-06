@@ -117,7 +117,7 @@ impl Buffer {
         &self.status
     }
 
-    pub fn save(&mut self) -> io::Result<()> {
+    pub fn save(&mut self) -> io::Result<String> {
         self.status = Status::Saving;
         let file_path = self.file_path.as_ref().ok_or_else(|| {
             io::Error::new(
@@ -128,7 +128,7 @@ impl Buffer {
         let file = BufWriter::new(File::create(file_path)?);
         self.text.write_to(file)?;
         self.status = Status::Clean;
-        Ok(())
+        Ok(format!("Wrote {} bytes to {}", self.text.len_bytes(), file_path.display()))
     }
 
     pub fn insert_char(&mut self, c: char) {
