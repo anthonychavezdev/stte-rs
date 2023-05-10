@@ -2,11 +2,44 @@ use crossterm::terminal::ClearType;
 use crossterm::{execute, terminal};
 use ropey::iter::{Bytes, Chars, Chunks, Lines};
 use ropey::{Rope, RopeSlice};
+use std::error::Error;
+use std::fmt;
 use std::fs::File;
-use std::io::{self, BufReader, BufWriter};
+use std::io::{self, BufReader, BufWriter, ErrorKind};
 use std::path::{PathBuf, Path};
 
 use crate::file_props::FileProps;
+
+#[derive(Debug)]
+pub struct BufferError {
+    message: String,
+    cause: Option<io::Error>,
+}
+
+impl fmt::Display for BufferError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)?;
+        if let Some(cause) = &self.cause {
+            write!(f, ": {}", cause)?;
+        }
+        Ok(())
+    }
+}
+
+impl Error for BufferError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        self.cause.as_ref().map(|e| e as &(dyn Error + 'static))
+    }
+}
+
+impl From<io::Error> for BufferError {
+    fn from(error: io::Error) -> Self {
+        BufferError {
+            message: "I/O error occurred".to_string(),
+            cause: Some(error),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Status {
@@ -25,11 +58,11 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new(file_props: Option<FileProps>) -> Buffer {
+    pub fn new(path: Option<PathBuf>, file_props: Option<FileProps>) -> Buffer {
         let text = Rope::new();
         Buffer {
             text,
-            file_path: None,
+            file_path: path,
             status: Status::Clean,
             cursor_pos: 0,
             file_props
@@ -74,19 +107,43 @@ impl Buffer {
         (cursor_x, cursor_y)
     }
 
-    pub fn from_path(path: &str) -> io::Result<Self> {
-        if !Path::new(path).exists() {
-            File::create(path)?;
-        }
-        let text = Rope::from_reader(&mut BufReader::new(File::open(&path)?))?;
+    pub fn from_path(path: &str) -> Result<Self, BufferError> {
+        let path = Path::new(path);
+        let file = File::open(&path);
 
-        Ok(Buffer {
-            text,
-            file_path: Some(PathBuf::from(path)),
-            status: Status::Clean,
-            cursor_pos: 0,
-            file_props: Some(FileProps::new())
-        })
+        match file {
+            Ok(file) => {
+                let text = Rope::from_reader(&mut BufReader::new(file))?;
+                Ok(Buffer {
+                    text,
+                    file_path: Some(PathBuf::from(path)),
+                    status: Status::Clean,
+                    cursor_pos: 0,
+                    file_props: Some(FileProps::new())
+                })
+            },
+            Err(e) => {
+                if e.kind() == ErrorKind::PermissionDenied {
+                    Err(BufferError {
+                        message: "Can't read file".to_string(),
+                        cause: Some(e)
+                    })
+                } else if e.kind() == ErrorKind::NotFound {
+                    Ok(Buffer {
+                        text: Rope::new(),
+                        file_path: Some(PathBuf::from(path)),
+                        status: Status::Clean,
+                        cursor_pos: 0,
+                        file_props: Some(FileProps::new())
+                    })
+                } else {
+                    Err(BufferError {
+                        message: "Can't open file".to_string(),
+                        cause: Some(e)
+                    })
+                }
+            },
+        }
     }
 
     pub fn get_line(&self, idx: usize) -> RopeSlice {
@@ -117,19 +174,39 @@ impl Buffer {
         &self.status
     }
 
-    pub fn save(&mut self) -> io::Result<String> {
+    pub fn save(&mut self) -> Result<String, BufferError> {
         self.status = Status::Saving;
-        let file_path = self.file_path.as_ref().ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                "There's no associated file path with this buffer",
-            )
-        })?;
-        let file = BufWriter::new(File::create(file_path)?);
-        self.text.write_to(file)?;
-        self.status = Status::Clean;
-        Ok(format!("Wrote {} bytes to {}", self.text.len_bytes(), file_path.display()))
+        match &self.file_path {
+            Some(path) => {
+                let file = File::create(&path);
+                match file {
+                    Ok(mut file) => {
+                        self.text.write_to(&mut file)?;
+                        self.status = Status::Clean;
+                        Ok(format!("Wrote {} bytes to {}", self.text.len_bytes(), path.display()))
+                    },
+                    Err(e) => {
+                        if e.kind() == ErrorKind::PermissionDenied {
+                            Err(BufferError {
+                                message: "Can't write to file".to_string(),
+                                cause: Some(e),
+                            })
+                        } else {
+                            Err(BufferError {
+                                message: "I/O error occurred".to_string(),
+                                cause: Some(e),
+                            })
+                        }
+                    },
+                }
+            }
+            None => Err(BufferError {
+                message: "No file associated with buffer".to_string(),
+                cause: None,
+            })
+        }
     }
+
 
     pub fn insert_char(&mut self, c: char) {
         self.text.insert_char(self.cursor_pos, c);

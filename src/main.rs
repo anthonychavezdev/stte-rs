@@ -3,6 +3,7 @@ use crossterm::{event, terminal, execute};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
 use std::env;
 use std::io::stdout;
+use std::path::PathBuf;
 
 use buffer::Buffer;
 use screen::Screen;
@@ -148,12 +149,12 @@ fn main() -> crossterm::Result<()> {
         match Buffer::from_path(&path) {
             Ok(buffer) => buffer,
             Err(error) => {
-                eprintln!("Error creating buffer or opening file\n{:?}", error);
-                Buffer::new(None) // Create an empty buffer if there's an error
+                editor.output.display_status_message(&error.to_string())?;
+                Buffer::new(Some(PathBuf::from(&path)), None) // Create a buffer if there's an error but a path is still provided
             }
         }
     } else {
-        Buffer::new(None) // Create an empty buffer if no file is specified
+        Buffer::new(None, None) // Create an empty buffer if no file is specified
     };
     // Clear terminal screen on first run
     let window_size = editor.output.window_size();
