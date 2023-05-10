@@ -19,6 +19,10 @@ impl Screen {
         }
     }
 
+    pub fn window_size(&self) -> Result<(u16, u16), String> {
+        self.win_size.as_ref().map_err(|e| format!("Error obtaining screen size: {}", e.to_string())).copied()
+    }
+
     fn draw_eof_indicators(&mut self, starting_row: u16) -> crossterm::Result<()> {
         if let Ok(win_size) = self.win_size {
             let (_, screen_rows) = win_size;
@@ -36,9 +40,11 @@ impl Screen {
         Ok(())
     }
 
-    pub fn clear() -> crossterm::Result<()> {
-        execute!(stdout(), terminal::Clear(ClearType::All))?;
-        execute!(stdout(), terminal::Clear(ClearType::Purge))?;
+    pub fn clear(rows: u16, cols: u16) -> crossterm::Result<()> {
+        // This avoid whiping out the status line
+        let status_message_row: u16 = rows - 1;
+        execute!(stdout(), cursor::MoveTo(0, status_message_row))?;
+        execute!(stdout(), terminal::Clear(ClearType::FromCursorUp))?;
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
 
@@ -70,11 +76,11 @@ impl Screen {
                 style::Print(message))?;
 
             execute!(self.stdout,
-            cursor::MoveTo(1, screen_rows - 2),
-            terminal::Clear(ClearType::CurrentLine))?;
+                cursor::MoveTo(1, screen_rows - 2),
+                terminal::Clear(ClearType::CurrentLine))?;
             self.stdout.flush()?;
-
         }
+
         Ok(())
     }
 }

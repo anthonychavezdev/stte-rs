@@ -1,6 +1,8 @@
-use crossterm::{event, terminal};
+use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::{event, terminal, execute};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
 use std::env;
+use std::io::stdout;
 
 use buffer::Buffer;
 use screen::Screen;
@@ -21,7 +23,7 @@ struct CleanUp;
 
 impl Drop for CleanUp {
     fn drop(&mut self) {
-        Screen::clear().expect("Error");
+        execute!(stdout(), LeaveAlternateScreen).unwrap();
         terminal::disable_raw_mode().expect("Could not turn off raw mode");
     }
 }
@@ -136,10 +138,11 @@ impl TextEditor {
 fn main() -> crossterm::Result<()> {
     // When this variable goes out of scope the drop method is ran
     let _clean_up: CleanUp = CleanUp;
+    // Enter the alternate screen buffer
+    execute!(stdout(), EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
     let mut editor: TextEditor = TextEditor::new();
     let args: Vec<String> = env::args().collect();
-
     let mut buffer: Buffer = if args.len() > 1 {
         let path: &String = &args[1];
         match Buffer::from_path(&path) {
@@ -153,7 +156,17 @@ fn main() -> crossterm::Result<()> {
         Buffer::new(None) // Create an empty buffer if no file is specified
     };
     // Clear terminal screen on first run
-    Screen::clear().expect("Error clearing screen");
+    let window_size = editor.output.window_size();
+    match window_size {
+        Ok((r, c)) => {
+            Screen::clear(r, c)?;
+        }
+        Err(e) => {
+            execute!(stdout(), LeaveAlternateScreen).unwrap();
+            eprintln!("{}", e);
+            std::process::exit(1)
+        }
+    }
     while editor.run(&mut buffer)? {}
     Ok(())
 }
