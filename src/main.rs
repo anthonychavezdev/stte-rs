@@ -11,7 +11,6 @@ use screen::Screen;
 mod buffer;
 mod keyboard;
 mod screen;
-mod file_props;
 
 /** The `CleanUp` struct is used to disable raw_mode
 when the struct goes out of scope.
@@ -150,11 +149,11 @@ fn main() -> crossterm::Result<()> {
             Ok(buffer) => buffer,
             Err(error) => {
                 editor.output.display_status_message(&error.to_string())?;
-                Buffer::new(Some(PathBuf::from(&path)), None) // Create a buffer if there's an error but a path is still provided
+                Buffer::new(Some(PathBuf::from(&path))) // Create a buffer if there's an error but a path is still provided
             }
         }
     } else {
-        Buffer::new(None, None) // Create an empty buffer if no file is specified
+        Buffer::new(None) // Create an empty buffer if no file is specified
     };
     // Clear terminal screen on first run
     let window_size = editor.output.window_size();

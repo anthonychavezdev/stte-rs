@@ -8,8 +8,6 @@ use std::fs::File;
 use std::io::{self, BufReader, BufWriter, ErrorKind};
 use std::path::{PathBuf, Path};
 
-use crate::file_props::FileProps;
-
 #[derive(Debug)]
 pub struct BufferError {
     message: String,
@@ -54,18 +52,22 @@ pub struct Buffer {
     file_path: Option<PathBuf>, // path associated with a file. Buffers don't always need to be associated with a file, they can be in memory only
     status: Status, // Whether the buffer has been modified, left unchanged, or is being saved back to disk?
     cursor_pos: usize,
-    file_props: Option<FileProps>
+    line_endings: String
 }
 
 impl Buffer {
-    pub fn new(path: Option<PathBuf>, file_props: Option<FileProps>) -> Buffer {
+    pub fn new(path: Option<PathBuf>) -> Buffer {
         let text = Rope::new();
         Buffer {
             text,
             file_path: path,
             status: Status::Clean,
             cursor_pos: 0,
-            file_props
+            line_endings: if cfg!(target_os = "windows") {
+                "\r\n".to_string()
+            } else {
+                "\n".to_string()
+            }
         }
     }
 
@@ -119,7 +121,11 @@ impl Buffer {
                     file_path: Some(PathBuf::from(path)),
                     status: Status::Clean,
                     cursor_pos: 0,
-                    file_props: Some(FileProps::new())
+                    line_endings: if cfg!(target_os = "windows") {
+                        "\r\n".to_string()
+                    } else {
+                        "\n".to_string()
+                    }
                 })
             },
             Err(e) => {
@@ -134,7 +140,11 @@ impl Buffer {
                         file_path: Some(PathBuf::from(path)),
                         status: Status::Clean,
                         cursor_pos: 0,
-                        file_props: Some(FileProps::new())
+                        line_endings: if cfg!(target_os = "windows") {
+                            "\r\n".to_string()
+                        } else {
+                            "\n".to_string()
+                        }
                     })
                 } else {
                     Err(BufferError {
@@ -216,18 +226,15 @@ impl Buffer {
 
     pub fn delete_char(&mut self) -> crossterm::Result<()> {
         if self.cursor_pos > 0 {
-            if let Some(file_props) = &self.file_props {
-                let ending: String = file_props.line_ending();
-                if  ending.eq("\r\n") &&
-                    self.cursor_pos > 2 &&
-                    self.text.slice((self.cursor_pos - 2)..self.cursor_pos).eq("\r\n") {
-                        self.text.remove((self.cursor_pos - 2)..self.cursor_pos);
-                        self.cursor_pos -= 2;
-                    } else {
-                        self.text.remove((self.cursor_pos - 1)..self.cursor_pos);
-                        self.cursor_pos -= 1;
-                    }
-            }
+            if self.line_endings.eq("\r\n") &&
+                self.cursor_pos > 2 &&
+                self.text.slice((self.cursor_pos - 2)..self.cursor_pos).eq("\r\n") {
+                    self.text.remove((self.cursor_pos - 2)..self.cursor_pos);
+                    self.cursor_pos -= 2;
+                } else {
+                    self.text.remove((self.cursor_pos - 1)..self.cursor_pos);
+                    self.cursor_pos -= 1;
+                }
             // I don't know how efficient this is, but it fixes the issue where
             // when the user removes a bunch of new lines, it wouldn't refresh
             // what was underneath the cursor so there were "ghost" images
@@ -239,15 +246,12 @@ impl Buffer {
     }
 
     pub fn insert_newline(&mut self) -> crossterm::Result<()> {
-        if let Some(file_props) = &self.file_props {
-            let ending: String = file_props.line_ending();
-            self.text.insert(self.cursor_pos, &ending);
-            // How much to move to the right to be in front of the newline character(s).
-            if ending.eq("\r\n") {
-                self.cursor_pos += 2;
-            } else {
-                self.cursor_pos += 1;
-            }
+        self.text.insert(self.cursor_pos, &self.line_endings);
+        // How much to move to the right to be in front of the newline character(s).
+        if self.line_endings.eq("\r\n") {
+            self.cursor_pos += 2;
+        } else {
+            self.cursor_pos += 1;
         }
         execute!(std::io::stdout(), terminal::Clear(ClearType::FromCursorDown))?;
         Ok(())
