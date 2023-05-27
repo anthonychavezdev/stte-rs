@@ -2,15 +2,13 @@ use crossterm::event;
 use crossterm::event::{Event, KeyEvent};
 use std::time::Duration;
 
-pub struct KeyboardReader;
+pub struct EventHandler;
 
-impl KeyboardReader {
-    pub fn read_key(&self) -> crossterm::Result<KeyEvent> {
+impl EventHandler {
+    pub fn get_events(&self) -> crossterm::Result<Event> {
         loop {
             if event::poll(Duration::from_millis(500))? {
-                if let Event::Key(event) = event::read()? {
-                    return Ok(event);
-                }
+               return  event::read();
             }
         }
     }

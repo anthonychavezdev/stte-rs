@@ -23,6 +23,12 @@ impl Screen {
         self.win_size.as_ref().map_err(|e| format!("Error obtaining screen size: {}", e.to_string())).copied()
     }
 
+    pub fn update_window_size(&mut self, width: u16, height: u16) -> crossterm::Result<()> {
+        self.win_size = Ok((width, height));
+        self.refresh()?;
+        Ok(())
+    }
+
     fn draw_eof_indicators(&mut self, starting_row: u16) -> crossterm::Result<()> {
         if let Ok(win_size) = self.win_size {
             let (_, screen_rows) = win_size;
@@ -48,12 +54,20 @@ impl Screen {
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
 
-    pub fn refresh(&mut self) -> crossterm::Result<()> {
+    pub fn refresh_line(&mut self) -> crossterm::Result<()> {
         execute!(self.stdout, terminal::Clear(ClearType::CurrentLine))?;
         Ok(())
     }
+
+    pub fn refresh(&mut self) -> crossterm::Result<()> {
+        if let Ok(win_size) = self.win_size {
+            Screen::clear(win_size.0, win_size.1)?;
+        }
+        Ok(())
+    }
+
     pub fn display_buffer(&mut self, buffer: &Buffer) -> crossterm::Result<()> {
-        self.refresh()?;
+        self.refresh_line()?;
         let mut row: u16 = 0;
 
         for line in buffer.lines() {

@@ -1,6 +1,6 @@
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{event, terminal, execute};
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, Event};
 use std::env;
 use std::io::stdout;
 use std::path::PathBuf;
@@ -9,7 +9,7 @@ use buffer::Buffer;
 use screen::Screen;
 
 mod buffer;
-mod keyboard;
+mod event_handler;
 mod screen;
 
 /** The `CleanUp` struct is used to disable raw_mode
@@ -29,20 +29,20 @@ impl Drop for CleanUp {
 }
 
 struct TextEditor {
-    output: Screen,
-    reader: keyboard::KeyboardReader,
+    screen: Screen,
+    event_handler: event_handler::EventHandler
 }
 
 impl TextEditor {
     fn new() -> Self {
         Self {
-            reader: keyboard::KeyboardReader,
-            output: Screen::new(),
+            screen: Screen::new(),
+            event_handler: event_handler::EventHandler,
         }
     }
 
-    fn process_keypress(&mut self, buffer: &mut Buffer) -> crossterm::Result<bool> {
-        match self.reader.read_key()? {
+    fn process_keypress(&mut self, buffer: &mut Buffer, key_event: KeyEvent) -> crossterm::Result<bool> {
+        match key_event {
             KeyEvent {
                 code: KeyCode::Char('q'),
                 modifiers: event::KeyModifiers::CONTROL,
@@ -89,10 +89,10 @@ impl TextEditor {
             } => {
                 match buffer.save() {
                     Ok(message) => {
-                        self.output.display_status_message(&message)?;
+                        self.screen.display_status_message(&message)?;
                     }
                     Err(e) => {
-                        self.output.display_status_message(&format!("{}", e.to_string()))?;
+                        self.screen.display_status_message(&format!("{}", e.to_string()))?;
                     }
                 }
             }
@@ -129,9 +129,22 @@ impl TextEditor {
         Ok(true)
     }
 
+    fn process_events(&mut self, buffer: &mut Buffer) -> crossterm::Result<bool> {
+        match self.event_handler.get_events()? {
+            Event::Key(keyEvent) => {
+                return self.process_keypress(buffer, keyEvent);
+            },
+            Event::Resize(width, height) => {
+                self.screen.update_window_size(width, height)?;
+            },
+        _ => {}
+    }
+        Ok(true)
+}
+
     fn run(&mut self, buffer: &mut Buffer) -> crossterm::Result<bool> {
-        self.output.display_buffer(&buffer)?;
-        self.process_keypress(buffer)
+        self.screen.display_buffer(&buffer)?;
+        self.process_events(buffer)
     }
 }
 
@@ -148,7 +161,7 @@ fn main() -> crossterm::Result<()> {
         match Buffer::from_path(&path) {
             Ok(buffer) => buffer,
             Err(error) => {
-                editor.output.display_status_message(&error.to_string())?;
+                editor.screen.display_status_message(&error.to_string())?;
                 Buffer::new(Some(PathBuf::from(&path))) // Create a buffer if there's an error but a path is still provided
             }
         }
@@ -156,7 +169,7 @@ fn main() -> crossterm::Result<()> {
         Buffer::new(None) // Create an empty buffer if no file is specified
     };
     // Clear terminal screen on first run
-    let window_size = editor.output.window_size();
+    let window_size = editor.screen.window_size();
     match window_size {
         Ok((r, c)) => {
             Screen::clear(r, c)?;
