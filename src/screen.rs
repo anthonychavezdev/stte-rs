@@ -41,7 +41,7 @@ impl Screen {
     }
 
     pub fn clear(rows: u16, cols: u16) -> crossterm::Result<()> {
-        // This avoid whiping out the status line
+        // This avoids clearing the status line
         let status_message_row: u16 = rows - 1;
         execute!(stdout(), cursor::MoveTo(0, status_message_row))?;
         execute!(stdout(), terminal::Clear(ClearType::FromCursorUp))?;
