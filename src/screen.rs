@@ -2,6 +2,7 @@ use crate::buffer::Buffer;
 use crossterm::terminal::ClearType;
 use crossterm::{cursor, execute, queue, terminal, style, };
 use std::io::{stdout, Stdout, Write};
+use unicode_width::UnicodeWidthChar;
 
 /// The Screen struct represents the terminal screen.
 pub struct Screen {
@@ -71,14 +72,18 @@ impl Screen {
         let mut row: u16 = 0;
 
         for line in buffer.lines() {
-            execute!(self.stdout, cursor::MoveTo(0, row),)?;
+            queue!(self.stdout, cursor::MoveTo(0, row),)?;
             self.stdout.write_all(line.to_string().as_bytes())?;
             self.stdout.write_all(b"\r\n")?;
             row += 1;
         }
         self.draw_eof_indicators(row)?;
         let (cursor_x, cursor_y) = buffer.get_cursor_xy();
-        execute!(self.stdout, cursor::MoveTo(cursor_x as u16, cursor_y as u16))
+        // This will perform poorly on long lines
+        let adjusted_cursor_x = buffer.get_line(cursor_y).slice(..cursor_x).chars().map(|c| {
+            UnicodeWidthChar::width(c).unwrap_or(1)
+        }).sum::<usize>();
+        execute!(self.stdout, cursor::MoveTo(adjusted_cursor_x as u16, cursor_y as u16))
     }
 
     pub fn display_status_message(&mut self, message: &str) -> crossterm::Result<()> {
