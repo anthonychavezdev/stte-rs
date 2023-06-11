@@ -109,6 +109,22 @@ impl Buffer {
         (cursor_x, cursor_y)
     }
 
+    /** The ropey cursor and the curosr that's actually shown in the editor
+     are different cursors.
+    This returns the width for characters so the cursors can be synced*/
+    pub fn get_visual_char_len(&self) -> usize {
+        let (cursor_x, cursor_y) = self.get_cursor_xy();
+        let line = self.text.line(cursor_y);
+        let mut visual_len: usize = 0;
+        for ch in line.chars().take(cursor_x) {
+            visual_len += match ch {
+                '\t' => 8,
+                _ => unicode_width::UnicodeWidthChar::width(ch).unwrap_or(1)
+            };
+        }
+        visual_len
+    }
+
     pub fn from_path(path: &str) -> Result<Self, BufferError> {
         let path = Path::new(path);
         let file = File::open(&path);

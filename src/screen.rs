@@ -78,11 +78,12 @@ impl Screen {
             row += 1;
         }
         self.draw_eof_indicators(row)?;
-        let (cursor_x, cursor_y) = buffer.get_cursor_xy();
+        let (_, cursor_y) = buffer.get_cursor_xy();
+        // Some characters take up multiple culumns, so the cursor's x position needs
+        // to be adjusted so it remains in sync with the the cursor in the rope data structure.
+        let adjusted_cursor_x = buffer.get_visual_char_len();
+
         // This will perform poorly on long lines
-        let adjusted_cursor_x = buffer.get_line(cursor_y).slice(..cursor_x).chars().map(|c| {
-            UnicodeWidthChar::width(c).unwrap_or(1)
-        }).sum::<usize>();
         execute!(self.stdout, cursor::MoveTo(adjusted_cursor_x as u16, cursor_y as u16))
     }
 

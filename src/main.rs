@@ -124,6 +124,14 @@ impl TextEditor {
             } => {
                 buffer.delete_char()?;
             }
+            KeyEvent {
+                code: KeyCode::Tab,
+                modifiers: event::KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE
+            } => {
+                buffer.insert_char('\t');
+            }
             _ => {}
         }
         Ok(true)
