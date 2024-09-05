@@ -8,7 +8,7 @@ impl EventHandler {
     pub fn get_events(&self) -> crossterm::Result<Event> {
         loop {
             if event::poll(Duration::from_millis(500))? {
-               return  event::read();
+                return event::read();
             }
         }
     }

@@ -1,6 +1,6 @@
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState};
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::{event, terminal, execute};
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, Event};
+use crossterm::{event, execute, terminal};
 use std::env;
 use std::io::stdout;
 use std::path::PathBuf;
@@ -30,7 +30,7 @@ impl Drop for CleanUp {
 
 struct TextEditor {
     screen: Screen,
-    event_handler: event_handler::EventHandler
+    event_handler: event_handler::EventHandler,
 }
 
 impl TextEditor {
@@ -41,7 +41,11 @@ impl TextEditor {
         }
     }
 
-    fn process_keypress(&mut self, buffer: &mut Buffer, key_event: KeyEvent) -> crossterm::Result<bool> {
+    fn process_keypress(
+        &mut self,
+        buffer: &mut Buffer,
+        key_event: KeyEvent,
+    ) -> crossterm::Result<bool> {
         match key_event {
             KeyEvent {
                 code: KeyCode::Char('q'),
@@ -86,21 +90,15 @@ impl TextEditor {
                 modifiers: event::KeyModifiers::CONTROL,
                 kind: KeyEventKind::Press,
                 state: KeyEventState::NONE,
-            } => {
-                match buffer.save() {
-                    Ok(message) => {
-                        self.screen.display_status_message(&message)?;
-                    }
-                    Err(e) => {
-                        self.screen.display_status_message(&format!("{}", e.to_string()))?;
-                    }
-                }
-            }
+            } => match buffer.save() {
+                Ok(message) => self.screen.set_status_message(message),
+                Err(e) => self.screen.set_status_message(format!("Error: {}", e)),
+            },
             KeyEvent {
                 code: KeyCode::Enter,
                 modifiers: _,
                 kind: KeyEventKind::Press,
-                state: KeyEventState::NONE
+                state: KeyEventState::NONE,
             } => {
                 buffer.insert_newline()?;
             }
@@ -108,7 +106,7 @@ impl TextEditor {
                 code: KeyCode::Char(c),
                 modifiers,
                 kind: KeyEventKind::Press,
-                state: KeyEventState::NONE
+                state: KeyEventState::NONE,
             } => {
                 if modifiers.contains(event::KeyModifiers::SHIFT) {
                     buffer.insert_char(c.to_uppercase().next().unwrap_or(c));
@@ -120,7 +118,7 @@ impl TextEditor {
                 code: KeyCode::Backspace,
                 modifiers: event::KeyModifiers::NONE,
                 kind: KeyEventKind::Press,
-                state: KeyEventState::NONE
+                state: KeyEventState::NONE,
             } => {
                 buffer.delete_char()?;
             }
@@ -128,7 +126,7 @@ impl TextEditor {
                 code: KeyCode::Tab,
                 modifiers: event::KeyModifiers::NONE,
                 kind: KeyEventKind::Press,
-                state: KeyEventState::NONE
+                state: KeyEventState::NONE,
             } => {
                 buffer.insert_char('\t');
             }
@@ -141,14 +139,14 @@ impl TextEditor {
         match self.event_handler.get_events()? {
             Event::Key(keyEvent) => {
                 return self.process_keypress(buffer, keyEvent);
-            },
+            }
             Event::Resize(width, height) => {
                 self.screen.update_window_size(width, height)?;
-            },
-        _ => {}
-    }
+            }
+            _ => {}
+        }
         Ok(true)
-}
+    }
 
     fn run(&mut self, buffer: &mut Buffer) -> crossterm::Result<bool> {
         self.screen.display_buffer(&buffer)?;
@@ -169,7 +167,7 @@ fn main() -> crossterm::Result<()> {
         match Buffer::from_path(&path) {
             Ok(buffer) => buffer,
             Err(error) => {
-                editor.screen.display_status_message(&error.to_string())?;
+                editor.screen.set_status_message(error.to_string());
                 Buffer::new(Some(PathBuf::from(&path))) // Create a buffer if there's an error but a path is still provided
             }
         }
@@ -177,17 +175,7 @@ fn main() -> crossterm::Result<()> {
         Buffer::new(None) // Create an empty buffer if no file is specified
     };
     // Clear terminal screen on first run
-    let window_size = editor.screen.window_size();
-    match window_size {
-        Ok((r, c)) => {
-            Screen::clear(r, c)?;
-        }
-        Err(e) => {
-            execute!(stdout(), LeaveAlternateScreen).unwrap();
-            eprintln!("{}", e);
-            std::process::exit(1)
-        }
-    }
+    editor.screen.clear()?;
     while editor.run(&mut buffer)? {}
     Ok(())
 }
