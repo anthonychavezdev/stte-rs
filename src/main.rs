@@ -39,11 +39,18 @@ fn run(buffer: &mut Buffer) -> io::Result<()> {
                 buffer.scroll(v_width, v_height);
                 display.render(buffer)?
             },
-            Action::CursorMovement(dir) => buffer.move_cursor(dir),
+            Action::CursorMovement(dir) => {
+                buffer.move_cursor(dir);
+                display.clear_status_message()
+            },
+            Action::Save => match buffer.save() {
+                    Ok(bytes) => display.set_status(format!("Wrote {} bytes to {}", bytes, buffer.path())),
+                    Err(e) => display.set_status(e.to_string())
+                }
             Action::Idle => {},
         }
-        let (v_width, v_height) = display.size();
-        buffer.scroll(v_width, v_height);
+        let (v_width, _) = display.size();
+        buffer.scroll(v_width, display.status_message_boundary());
         display.render(buffer)?
     }
 }

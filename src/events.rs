@@ -7,6 +7,7 @@ use crate::{cursor::Direction, display::Display};
 pub enum Action {
     Quit,
     Redraw,
+    Save,
     CursorMovement(Direction),
     Idle
 }
@@ -20,6 +21,14 @@ fn handle_key_press(key: KeyEvent) -> Action {
             state: KeyEventState::NONE
         } => {
             Action::Quit
+        },
+        KeyEvent {
+            code: KeyCode::Char('s'),
+            modifiers: KeyModifiers::CONTROL,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE,
+        } => {
+            Action::Save
         },
         KeyEvent {
             code: KeyCode::Up,

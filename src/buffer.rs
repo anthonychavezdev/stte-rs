@@ -1,10 +1,31 @@
-use std::{borrow::Cow, fs::File, io::{self, BufReader}, path::PathBuf};
+use std::{borrow::Cow, fmt, fs::File, io::{self, BufReader}, path::PathBuf};
 
 use ropey::Rope;
 
 use crate::cursor::{self, Cursor, Direction};
 
-#[derive(Default)]
+pub enum BufferError {
+    NoPath,
+    Io(io::Error)
+}
+
+impl fmt::Display for BufferError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BufferError::NoPath => write!(f, "no file associated with buffer"),
+            BufferError::Io(e) => write!(f, "save failed: {}", e),
+        }
+    }
+}
+
+impl From<io::Error> for BufferError {
+    fn from(error: io::Error) -> Self {
+        BufferError::Io(error)
+    }
+}
+
+
+#[derive(Default, Clone)]
 pub struct ScrollOffset {
     pub x: usize,
     pub y: usize
@@ -44,6 +65,13 @@ impl Buffer {
 
     pub fn rope(&self) -> &Rope {
         &self.text
+    }
+
+    pub fn path(&self) -> Cow<'_, str> {
+        match &self.path {
+            Some(path) => path.to_string_lossy(),
+            None => Cow::from("[No Name]")
+        }
     }
 
     pub fn line(&self, idx: usize) -> Cow<'_, str> {
@@ -157,4 +185,11 @@ impl Buffer {
         }
     }
 
+    pub fn save(&mut self) -> Result<usize, BufferError> {
+        let path = self.path.as_ref().ok_or(BufferError::NoPath)?;
+        let mut file = File::create(path)?;
+        self.text.write_to(&mut file)?;
+        file.sync_all()?;
+        Ok(self.text.len_bytes())
+    }
 }
