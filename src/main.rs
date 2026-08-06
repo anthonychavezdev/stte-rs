@@ -18,8 +18,8 @@ and the program exits. */
 struct Cleanup;
 
 fn restore_terminal() {
-    io::stdout().execute(LeaveAlternateScreen).expect("error leaving alternate screen. Run the reset command in your terminal");
-    terminal::disable_raw_mode().expect("Could not disable raw mode. Run the reset command to reset your terminal.");
+    let _ = io::stdout().execute(LeaveAlternateScreen);
+    let _ = terminal::disable_raw_mode();
 }
 
 impl Drop for Cleanup {
