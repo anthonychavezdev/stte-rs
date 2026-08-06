@@ -60,7 +60,7 @@ impl Display {
         let scroll_offset = buffer.scroll_offset();
         let rope = buffer.rope();
         let total_lines = rope.len_lines();
-        let width = self.width as usize;
+        let (width, height) = self.size();
         for row in 0..self.height {
             self.stdout.queue(crossterm::cursor::MoveTo(0, row))?;
             let line_idx = scroll_offset + row as usize;
@@ -75,7 +75,6 @@ impl Display {
         let line = buffer.line(cursor.line_indx());
         let col = cursor::display_width(&line[..cursor.col()])
             .min(self.width.saturating_sub(1) as usize);
-        let (width, height) = self.size();
         let row = (cursor.line_indx() - scroll_offset).min(height.saturating_sub(1) as usize);
         self.stdout.queue( crossterm::cursor::MoveTo(col as u16, row as u16))?
             .queue(crossterm::cursor::Show)?;
