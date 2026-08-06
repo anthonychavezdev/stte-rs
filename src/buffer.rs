@@ -76,7 +76,7 @@ impl Buffer {
             self.cursor.set_line_indx(line_indx + 1);
             self.cursor.set_col(0);
         }
-        self.sync_desired_col();
+        self.set_desired_col();
     }
 
     pub fn move_down(&mut self) {
@@ -100,7 +100,7 @@ impl Buffer {
             self.cursor.set_line_indx(line_indx);
             self.cursor.set_col(self.line(line_indx).len());
         }
-        self.sync_desired_col();
+        self.set_desired_col();
     }
 
     pub fn move_cursor(&mut self, dir: Direction) {
@@ -112,7 +112,7 @@ impl Buffer {
         }
     }
 
-    fn sync_desired_col(&mut self) {
+    fn set_desired_col(&mut self) {
         let line_indx = self.cursor.line_indx();
         let line = self.line(line_indx);
         let col = self.cursor.col();
