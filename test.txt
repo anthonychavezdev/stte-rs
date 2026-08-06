@@ -1,6 +1,6 @@
 Hello, world!
-Hello, world!
-こんにちは世界 😄😄😄😄 👋🏿👋🏻 YEAH!
+Hello, world! This is longer.
+こんにちは世界 😄😄😄😄 👋🏿👋🏻 YEAH! こんにちは世界 こんにちは世界 こんにちは世界 こんにちは世界 こんにちは世界 こんにちは世界 こんにちは世界 こんにちは世界
 
 
 
@@ -12,3 +12,4 @@ How are you?
 
 Hello, there! There's a tab here	See?	So cool.
 
+This is a really long line to see if the line is cutoff after a certain point 👋🏿. It should. Nothing after this should be visible. If it is, something is wrong, not working.

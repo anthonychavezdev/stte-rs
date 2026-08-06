@@ -4,12 +4,18 @@ use ropey::Rope;
 
 use crate::cursor::{self, Cursor, Direction};
 
+#[derive(Default)]
+pub struct ScrollOffset {
+    pub x: usize,
+    pub y: usize
+}
+
 pub struct Buffer {
     text: Rope,
     #[allow(dead_code)]
     path: Option<PathBuf>,
     cursor: Cursor,
-    scroll_offset: usize
+    scroll_offset: ScrollOffset
 }
 
 impl Buffer {
@@ -24,7 +30,7 @@ impl Buffer {
             text,
             path,
             cursor: Cursor::default(),
-            scroll_offset: 0
+            scroll_offset: ScrollOffset::default()
         })
     }
 
@@ -32,8 +38,8 @@ impl Buffer {
         &self.cursor
     }
 
-    pub fn scroll_offset(&self) -> usize {
-        self.scroll_offset
+    pub fn scroll_offset(&self) -> &ScrollOffset {
+        &self.scroll_offset
     }
 
     pub fn rope(&self) -> &Rope {
@@ -131,14 +137,24 @@ impl Buffer {
     }
 
     pub fn scroll(&mut self, v_width: usize, v_height: usize) {
-        if v_height == 0 {
+        if v_width == 0 || v_height == 0 {
             return;
         }
         let line_indx = self.cursor.line_indx();
-        if line_indx < self.scroll_offset {
-            self.scroll_offset = line_indx;
-        } else if line_indx >= self.scroll_offset + v_height {
-            self.scroll_offset = line_indx + 1 - v_height;
+        if line_indx < self.scroll_offset.y {
+            self.scroll_offset.y = line_indx;
+        } else if line_indx >= self.scroll_offset.y + v_height {
+            self.scroll_offset.y = line_indx + 1 - v_height;
+        }
+
+        let line = self.line(line_indx);
+        let cursor_col = cursor::display_width(&line[..self.cursor.col()]);
+        drop(line);
+        if cursor_col < self.scroll_offset.x {
+            self.scroll_offset.x = cursor_col;
+        } else if cursor_col >= self.scroll_offset.x + v_width {
+            self.scroll_offset.x = cursor_col + 1 - v_width;
         }
     }
+
 }
