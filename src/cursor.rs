@@ -3,6 +3,13 @@ use unicode_width::UnicodeWidthStr;
 
 pub const TAB_STOP: usize = 4;
 
+pub enum Direction {
+    Up,
+    Right,
+    Down,
+    Left
+}
+
 #[derive(Default)]
 pub struct Cursor {
     line_indx: usize,
@@ -52,3 +59,32 @@ pub fn display_width(text: &str) -> usize {
     col
 }
 
+pub fn prev_grapheme_boundary(line: &str, byte: usize) -> usize {
+    line[..byte]
+        .grapheme_indices(true)
+        .last()
+        .map(|(i, _)| i)
+        .unwrap_or(0)
+}
+
+pub fn next_grapheme_boundary(line: &str, byte: usize) -> usize {
+    line[byte..]
+        .graphemes(true)
+        .next()
+        .map(|g| byte + g.len())
+        .unwrap_or(line.len())
+}
+
+pub fn byte_at_display_col(line: &str, target: usize) -> usize {
+    let mut col = 0;
+    let mut byte = 0;
+    for g in line.graphemes(true) {
+        let w = grapheme_width(g, col);
+        if col + w > target {
+            break;
+        }
+        col += w;
+        byte += g.len();
+    }
+    byte
+}

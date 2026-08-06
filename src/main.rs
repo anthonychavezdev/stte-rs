@@ -32,9 +32,25 @@ fn run(buffer: &mut Buffer) -> io::Result<()> {
     let mut display = Display::new()?;
     display.render(buffer)?;
     loop {
-        match events::handle_events(&mut display)? {
+        match events::get_event_actions(&mut display)? {
             Action::Quit => return Ok(()),
             Action::Redraw => display.render(buffer)?,
+            Action::CursorMovement(cursor::Direction::Up) => {
+                buffer.move_up();
+                display.render(buffer)?
+            },
+            Action::CursorMovement(cursor::Direction::Right) => {
+                buffer.move_right();
+                display.render(buffer)?
+            },
+            Action::CursorMovement(cursor::Direction::Down) => {
+                buffer.move_down();
+                display.render(buffer)?
+            },
+            Action::CursorMovement(cursor::Direction::Left) => {
+                buffer.move_left();
+                display.render(buffer)?
+            },
             Action::Idle => {},
         }
     }

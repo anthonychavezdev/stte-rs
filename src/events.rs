@@ -2,11 +2,12 @@ use std::{io, time::Duration};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, poll, read};
 
-use crate::display::Display;
+use crate::{cursor::Direction, display::Display};
 
 pub enum Action {
     Quit,
     Redraw,
+    CursorMovement(Direction),
     Idle
 }
 
@@ -20,13 +21,37 @@ fn handle_key_press(key: KeyEvent) -> Action {
         } => {
             Action::Quit
         },
+        KeyEvent {
+            code: KeyCode::Up,
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE
+        } => Action::CursorMovement(Direction::Up),
+        KeyEvent {
+            code: KeyCode::Right,
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE
+        } => Action::CursorMovement(Direction::Right),
+        KeyEvent {
+            code: KeyCode::Down,
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE
+        } => Action::CursorMovement(Direction::Down),
+        KeyEvent {
+            code: KeyCode::Left,
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: KeyEventState::NONE
+        } => Action::CursorMovement(Direction::Left),
         _ => {
             Action::Idle
         }
     }
 }
 
-pub fn handle_events(display: &mut Display) -> io::Result<Action> {
+pub fn get_event_actions(display: &mut Display) -> io::Result<Action> {
     if !poll(Duration::from_millis(500))? {
         return Ok(Action::Idle);
     }
