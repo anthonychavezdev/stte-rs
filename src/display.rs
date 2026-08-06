@@ -29,8 +29,8 @@ impl Display {
         self.height = height;
     }
 
-    pub fn height(&self) -> usize {
-        self.height as usize
+    pub fn size(&self) -> (usize, usize) {
+        (self.width as usize, self.height as usize)
     }
 
     fn fill_line_buffer(&mut self, line: &str, width: usize) -> io::Result<()> {
@@ -75,7 +75,8 @@ impl Display {
         let line = buffer.line(cursor.line_indx());
         let col = cursor::display_width(&line[..cursor.col()])
             .min(self.width.saturating_sub(1) as usize);
-        let row = (cursor.line_indx() - scroll_offset).min(self.height().saturating_sub(1) as usize);
+        let (width, height) = self.size();
+        let row = (cursor.line_indx() - scroll_offset).min(height.saturating_sub(1) as usize);
         self.stdout.queue( crossterm::cursor::MoveTo(col as u16, row as u16))?
             .queue(crossterm::cursor::Show)?;
         self.stdout.flush()

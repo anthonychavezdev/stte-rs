@@ -2,7 +2,7 @@ use std::{borrow::Cow, fs::File, io::{self, BufReader}, path::PathBuf};
 
 use ropey::Rope;
 
-use crate::{cursor, cursor::Cursor};
+use crate::cursor::{self, Cursor, Direction};
 
 pub struct Buffer {
     text: Rope,
@@ -55,20 +55,12 @@ impl Buffer {
         Cow::from(slice.slice(..end))
     }
 
-    pub fn move_left(&mut self) {
-        let col = self.cursor.col();
-        let mut line_indx = self.cursor.line_indx();
-        if col > 0 {
-            let current_line = self.line(line_indx);
-            let new_col = cursor::prev_grapheme_boundary(&current_line, col);
-            drop(current_line);
-            self.cursor.set_col(new_col);
-        } else if line_indx > 0 {
-            line_indx -= 1;
-            self.cursor.set_line_indx(line_indx);
-            self.cursor.set_col(self.line(line_indx).len());
+    pub fn move_up(&mut self) {
+        let line_indx = self.cursor.line_indx();
+        if line_indx > 0 {
+            self.cursor.set_line_indx(line_indx - 1);
+            self.snap_col_to_desired();
         }
-        self.sync_desired_col();
     }
 
     pub fn move_right(&mut self) {
@@ -87,19 +79,36 @@ impl Buffer {
         self.sync_desired_col();
     }
 
-    pub fn move_up(&mut self) {
-        let line_indx = self.cursor.line_indx();
-        if line_indx > 0 {
-            self.cursor.set_line_indx(line_indx - 1);
-            self.snap_col_to_desired();
-        }
-    }
-
     pub fn move_down(&mut self) {
         let line_indx = self.cursor.line_indx();
         if line_indx + 1 < self.text.len_lines() {
             self.cursor.set_line_indx(line_indx + 1);
             self.snap_col_to_desired();
+        }
+    }
+
+    pub fn move_left(&mut self) {
+        let col = self.cursor.col();
+        let mut line_indx = self.cursor.line_indx();
+        if col > 0 {
+            let current_line = self.line(line_indx);
+            let new_col = cursor::prev_grapheme_boundary(&current_line, col);
+            drop(current_line);
+            self.cursor.set_col(new_col);
+        } else if line_indx > 0 {
+            line_indx -= 1;
+            self.cursor.set_line_indx(line_indx);
+            self.cursor.set_col(self.line(line_indx).len());
+        }
+        self.sync_desired_col();
+    }
+
+    pub fn move_cursor(&mut self, dir: Direction) {
+        match dir {
+            Direction::Up => self.move_up(),
+            Direction::Right => self.move_right(),
+            Direction::Down => self.move_down(),
+            Direction::Left => self.move_left(),
         }
     }
 
@@ -119,5 +128,17 @@ impl Buffer {
         let c = cursor::byte_at_display_col(&line, col);
         drop(line);
         self.cursor.set_col(c);
+    }
+
+    pub fn scroll(&mut self, v_width: usize, v_height: usize) {
+        if v_height == 0 {
+            return;
+        }
+        let line_indx = self.cursor.line_indx();
+        if line_indx < self.scroll_offset {
+            self.scroll_offset = line_indx;
+        } else if line_indx >= self.scroll_offset + v_height {
+            self.scroll_offset = line_indx + 1 - v_height;
+        }
     }
 }
