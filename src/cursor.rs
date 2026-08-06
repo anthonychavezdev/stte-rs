@@ -5,7 +5,7 @@ pub const TAB_STOP: usize = 4;
 
 #[derive(Default)]
 pub struct Cursor {
-    line: usize,
+    line_indx: usize,
     col: usize,
     desired_col: usize
 }
@@ -19,12 +19,12 @@ impl Cursor {
         self.col = col
     }
 
-    pub fn line(&self) -> usize {
-        self.line
+    pub fn line_indx(&self) -> usize {
+        self.line_indx
     }
 
-    pub fn set_line(&mut self, line: usize) {
-        self.line = line
+    pub fn set_line_indx(&mut self, line: usize) {
+        self.line_indx = line
     }
 
     pub fn desired_col(&self) -> usize {
@@ -35,7 +35,6 @@ impl Cursor {
         self.desired_col = desired_col;
     }
 }
-
 
 pub fn grapheme_width(grapheme: &str, col: usize) -> usize {
     if grapheme == "\t" {

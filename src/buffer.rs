@@ -32,13 +32,14 @@ impl Buffer {
         &self.cursor
     }
 
-    pub fn scroll_offset(&self) -> usize{
+    pub fn scroll_offset(&self) -> usize {
         self.scroll_offset
     }
 
     pub fn rope(&self) -> &Rope {
         &self.text
     }
+
     pub fn line(&self, idx: usize) -> Cow<'_, str> {
         if idx >= self.text.len_lines() {
             return Cow::from("");

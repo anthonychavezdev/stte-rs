@@ -72,10 +72,10 @@ impl Display {
             self.stdout.queue(Clear(ClearType::UntilNewLine))?;
         }
         let cursor = buffer.cursor();
-        let line = buffer.line(cursor.line());
+        let line = buffer.line(cursor.line_indx());
         let col = cursor::display_width(&line[..cursor.col()])
             .min(self.width.saturating_sub(1) as usize);
-        let row = (cursor.line() - scroll_offset).min(self.height().saturating_sub(1) as usize);
+        let row = (cursor.line_indx() - scroll_offset).min(self.height().saturating_sub(1) as usize);
         self.stdout.queue( crossterm::cursor::MoveTo(col as u16, row as u16))?
             .queue(crossterm::cursor::Show)?;
         self.stdout.flush()
